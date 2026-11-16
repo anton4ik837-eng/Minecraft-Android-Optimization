@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "build_id": "example-1.21.1-fabric",
+  "status": "experimental",
+  "minecraft": "1.21.1",
+  "loader": {"name": "fabric", "version": "REPLACE_ME"},
+  "zalith_launcher": {"version": "REPLACE_ME"},
+  "renderer": {"name": "REPLACE_ME", "version": "REPLACE_ME", "config": "configurations/graphics/REPLACE_ME"},
+  "java": {"runtime": "REPLACE_ME", "jvm_args_file": "configurations/jvm/REPLACE_ME"},
+  "mods_manifest": "mods/manifests/REPLACE_ME.json",
+  "resource_packs": [],
+  "shader_packs": [],
+  "tested_device": "Lenovo Xiaoxin Pad Pro GT / Snapdragon 8 Gen 3 / Adreno 750 / 12 GB RAM",
+  "test_ids": [],
+  "archive": {"release_url": null, "sha256": null},
+  "notes": "Replace all placeholders before publishing."
+}
