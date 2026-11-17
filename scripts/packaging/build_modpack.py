@@ -193,65 +193,42 @@ The APK is redistributed unchanged. SHA-256: """ + sha + "\n"
 
 
 def write_turnip_bundle(out):
-    # AdrenoTools-compatible Android driver package; release explicitly lists Adreno 750.
+    # Repackage the upstream AdrenoTools driver archive unchanged.
     repo = "JustCallMeJade/Drivers_Android_Mesa"
     tag = "v26.3.0-V5.0"
     rel = get_json(f"https://api.github.com/repos/{repo}/releases/tags/{tag}")
     assets = rel.get("assets", [])
-    candidates = [a for a in assets if a.get("name", "").lower().endswith((".adpkg", ".zip"))]
+    candidates = [a for a in assets if a.get("name", "").lower().endswith(".zip")]
     if not candidates:
-        raise RuntimeError(f"No AdrenoTools .adpkg/.zip driver asset found in {repo} {tag}")
-    # Prefer the native AdrenoTools package when the release supplies one.
-    candidates.sort(key=lambda a: (not a["name"].lower().endswith(".adpkg"), a["name"]))
-    chosen = None
-    data = None
-    for asset in candidates:
-        r = requests.get(asset["browser_download_url"], headers=HEADERS, timeout=300)
-        r.raise_for_status()
-        payload = r.content
-        try:
-            import io
-            with zipfile.ZipFile(io.BytesIO(payload)) as zf:
-                names = [n.lower() for n in zf.namelist()]
-                if any(n.endswith("libvulkan_freedreno.so") for n in names) and any(n.endswith("meta.json") for n in names):
-                    chosen, data = asset, payload
-                    break
-        except zipfile.BadZipFile:
-            continue
-    if chosen is None:
-        raise RuntimeError("No valid AdrenoTools Turnip package containing libvulkan_freedreno.so and meta.json")
+        raise RuntimeError(f"No ZIP driver asset found in {repo} {tag}")
+    chosen = candidates[0]
+    r = requests.get(chosen["browser_download_url"], headers=HEADERS, timeout=300)
+    r.raise_for_status()
+    data = r.content
+    if not data.startswith(b"PK\\x03\\x04"):
+        raise RuntimeError("Upstream Turnip asset is not a valid ZIP archive")
     sha = hashlib.sha256(data).hexdigest()
     package_name = pathlib.Path(chosen["name"]).name
     package_path = out / package_name
     package_path.write_bytes(data)
     instructions = """TURNIP 26.3.0-V5.0 — Adreno 750
-Status: EXPERIMENTAL / not yet tested on the exact Lenovo Xiaoxin Pad Pro GT.
+Status: EXPERIMENTAL / not tested on the exact Lenovo Xiaoxin Pad Pro GT.
 
-This is a separate Vulkan driver package for Android launchers that support
-AdrenoTools-compatible custom drivers. It is NOT a Minecraft mod and is NOT
-installed by importing the MCBBS modpack.
+This is the ORIGINAL upstream ZIP driver package, included unchanged.
+The upstream release explicitly lists Adreno 750 as supported.
 
 INSTALL
-1. In Zalith Launcher, open its GPU/Vulkan driver management screen.
-2. Import the supplied driver package if the launcher exposes an AdrenoTools /
-   custom driver import option. Do not extract or rename the package.
-3. Select the Turnip driver for the Minecraft profile and restart the game.
-4. If the launcher does not offer custom driver import, do not try to install
-   the library manually into Android system folders.
-
-DEVICE MATCH
-The upstream release lists Adreno 750 as supported. This is a compatibility
-claim, not a performance guarantee or a test on this exact tablet.
+1. Open Zalith Launcher's GPU/Vulkan driver management screen.
+2. Import this ZIP only if your installed launcher build supports this driver package format.
+3. Select Turnip for the Minecraft profile and restart the game.
+4. If there is no custom-driver import option, do not install libraries manually
+   into Android system folders.
 
 IMPORTANT
-- Turnip is a Vulkan driver, not a renderer.
-- Ironized Zink is an OpenGL-over-Vulkan renderer and bundles its own Mesa
-  components; selecting a system/custom Turnip driver may not replace the
-  Mesa version embedded in that renderer.
-- Test Turnip separately with a Vulkan-based renderer/backend. Keep the
-  previous driver available so you can roll back if Minecraft fails to start.
-- Do not assume Turnip improves FPS; compare identical worlds/settings and
-  record logs.
+- Turnip is a Vulkan driver, not a Minecraft renderer or mod.
+- Ironized Zink bundles its own Mesa components; this driver may not replace
+  the Mesa version used internally by Zink.
+- Keep the previous driver available for rollback. No FPS improvement is promised.
 
 Upstream: https://github.com/JustCallMeJade/Drivers_Android_Mesa/releases/tag/v26.3.0-V5.0
 Original asset: """ + package_name + """
