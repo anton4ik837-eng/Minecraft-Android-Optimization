@@ -15,8 +15,11 @@ SEEDS = [
     "modmenu",
 ]
 API = "https://api.modrinth.com/v2"
-HEADERS = {"User-Agent": "MinecraftAndroidOptimizationLab/0.1.0 (modpack builder)"}
-# Use the workflow token to avoid GitHub's low unauthenticated API rate limit.
+PUBLIC_HEADERS = {"User-Agent": "MinecraftAndroidOptimizationLab/0.1.0 (modpack builder)"}
+HEADERS = dict(PUBLIC_HEADERS)
+# Use the workflow token for GitHub API metadata only. Do not send it to
+# browser_download_url redirects, which serve binary release assets.
+
 if os.getenv("GITHUB_TOKEN"):
     HEADERS["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     HEADERS["X-GitHub-Api-Version"] = "2022-11-28"
@@ -150,7 +153,7 @@ def write_renderer_bundle(out):
     if not assets:
         raise RuntimeError("Ironized Zink v1.1.0 release has no APK asset")
     asset = assets[0]
-    r = requests.get(asset["browser_download_url"], headers=HEADERS, timeout=240)
+    r = requests.get(asset["browser_download_url"], headers=PUBLIC_HEADERS, timeout=240)
     r.raise_for_status()
     apk = r.content
     tmp = out / "IronizedZink.apk"
@@ -202,7 +205,7 @@ def write_turnip_bundle(out):
     if not candidates:
         raise RuntimeError(f"No ZIP driver asset found in {repo} {tag}")
     chosen = candidates[0]
-    r = requests.get(chosen["browser_download_url"], headers=HEADERS, timeout=300)
+    r = requests.get(chosen["browser_download_url"], headers=PUBLIC_HEADERS, timeout=300)
     r.raise_for_status()
     data = r.content
     if not data.startswith(b"PK\\x03\\x04"):
