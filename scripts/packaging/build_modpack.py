@@ -79,6 +79,24 @@ def download_mod(version, dest):
     return {"project": version.get("name"), "version": version.get("version_number"),
             "filename": target.name, "sha512": actual, "source": file["url"]}
 
+def download_dh_zstd(dest):
+    """Fetch the Android native Zstandard support mod from its CurseForge file."""
+    project_id = 1665823
+    file_id = 8844794  # DistantHorizonsZSTD 1.1.1; Fabric; supports MC 1.21.1
+    filename = "distanthorizonszstd-1.1.1.jar"
+    url = f"https://www.curseforge.com/api/v1/mods/{project_id}/files/{file_id}/download"
+    r = requests.get(url, headers=PUBLIC_HEADERS, timeout=180, allow_redirects=True)
+    r.raise_for_status()
+    data = r.content
+    if not data.startswith(b"PK"):
+        raise RuntimeError("CurseForge did not return the DistantHorizonsZSTD JAR (expected ZIP/JAR data)")
+    target = dest / filename
+    target.write_bytes(data)
+    return {"project": "DistantHorizonsZSTD", "version": "1.1.1",
+            "filename": filename, "sha256": hashlib.sha256(data).hexdigest(),
+            "source": "https://www.curseforge.com/minecraft/mc-mods/distanthorizonszstd",
+            "curseforge_project_id": project_id, "curseforge_file_id": file_id}
+
 def fabric_loader_version():
     versions = get_json(f"https://meta.fabricmc.net/v2/versions/loader/{MC}")
     stable = [v["loader"]["version"] for v in versions if v.get("loader", {}).get("stable")]
@@ -121,12 +139,14 @@ def write_modpack(out):
     records = []
     for version in resolve_mods():
         records.append(download_mod(version, mods_dir))
+    records.append(download_dh_zstd(mods_dir))
     (stage / "mcbbs.packmeta").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     readme = """ULTRA-FPS Android — experimental test build
 Minecraft Java 1.21.1 / Fabric / Java 21
 
 Included: Fabric API, Sodium, Lithium, FerriteCore, ImmediatelyFast,
-EntityCulling, Distant Horizons and Mod Menu (plus required dependencies).
+EntityCulling, Distant Horizons, DistantHorizonsZSTD (Android native Zstandard support),
+and Mod Menu (plus required dependencies).
 
 Renderer is installed separately: use the Ironized Zink bundle.
 Initial test is intentionally shader-free. Do not add Iris, shader packs,
