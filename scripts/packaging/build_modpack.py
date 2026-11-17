@@ -196,58 +196,51 @@ The APK is redistributed unchanged. SHA-256: """ + sha + "\n"
 
 
 def write_turnip_bundle(out):
-    # Repackage the upstream AdrenoTools driver archive unchanged.
+    # Publish a verified source/download pointer instead of repacking an upstream
+    # binary whose GitHub asset endpoint is returning HTML to the runner.
     repo = "JustCallMeJade/Drivers_Android_Mesa"
     tag = "v26.3.0-V5.0"
     rel = get_json(f"https://api.github.com/repos/{repo}/releases/tags/{tag}")
-    assets = rel.get("assets", [])
-    candidates = [a for a in assets if a.get("name", "").lower().endswith(".zip")]
-    if not candidates:
-        raise RuntimeError(f"No ZIP driver asset found in {repo} {tag}")
-    chosen = candidates[0]
-    r = requests.get(chosen["browser_download_url"], headers=PUBLIC_HEADERS, timeout=300)
-    r.raise_for_status()
-    data = r.content
-    if not data.startswith(b"PK\\x03\\x04"):
-        raise RuntimeError("Upstream Turnip asset is not a valid ZIP archive")
-    sha = hashlib.sha256(data).hexdigest()
-    package_name = pathlib.Path(chosen["name"]).name
-    package_path = out / package_name
-    package_path.write_bytes(data)
+    assets = [a for a in rel.get("assets", []) if a.get("name", "").lower().endswith(".zip")]
+    if not assets:
+        raise RuntimeError(f"No ZIP driver asset listed in {repo} {tag}")
+    asset = assets[0]
+    source_url = asset["browser_download_url"]
     instructions = """TURNIP 26.3.0-V5.0 — Adreno 750
 Status: EXPERIMENTAL / not tested on the exact Lenovo Xiaoxin Pad Pro GT.
 
-This is the ORIGINAL upstream ZIP driver package, included unchanged.
 The upstream release explicitly lists Adreno 750 as supported.
+This release asset is provided as an official download link; the driver binary
+is hosted by its original publisher and is not repacked into this information ZIP.
+
+OFFICIAL DRIVER DOWNLOAD
+""" + source_url + """
 
 INSTALL
-1. Open Zalith Launcher's GPU/Vulkan driver management screen.
-2. Import this ZIP only if your installed launcher build supports this driver package format.
-3. Select Turnip for the Minecraft profile and restart the game.
-4. If there is no custom-driver import option, do not install libraries manually
+1. Download the original ZIP from the official link above.
+2. In Zalith Launcher, open its GPU/Vulkan driver management screen.
+3. Import the ZIP only if your installed launcher build supports this driver format.
+4. Select Turnip for the Minecraft profile and restart the game.
+5. If there is no custom-driver import option, do not install libraries manually
    into Android system folders.
 
 IMPORTANT
 - Turnip is a Vulkan driver, not a Minecraft renderer or mod.
-- Ironized Zink bundles its own Mesa components; this driver may not replace
-  the Mesa version used internally by Zink.
+- Ironized Zink bundles its own Mesa components; Turnip may not replace the
+  Mesa version used internally by Zink.
 - Keep the previous driver available for rollback. No FPS improvement is promised.
 
-Upstream: https://github.com/JustCallMeJade/Drivers_Android_Mesa/releases/tag/v26.3.0-V5.0
-Original asset: """ + package_name + """
-SHA-256: """ + sha + """
+Upstream release: https://github.com/JustCallMeJade/Drivers_Android_Mesa/releases/tag/v26.3.0-V5.0
+Original asset: """ + asset["name"] + """
 """
-    bundle = out / "TURNIP-26.3.0-V5.0-ADRENO750.zip"
+    source = {"project": repo, "tag": tag, "asset": asset["name"],
+              "url": source_url, "gpu_support_claim": "Adreno 750",
+              "binary_included": False}
+    bundle = out / "TURNIP-26.3.0-V5.0-ADRENO750-INFO.zip"
     with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as z:
-        z.write(package_path, package_name)
         z.writestr("README-RU.txt", instructions)
-        z.writestr("source.json", json.dumps({
-            "project": repo, "tag": tag, "asset": package_name,
-            "url": chosen["browser_download_url"], "sha256": sha,
-            "gpu_support_claim": "Adreno 750"
-        }, ensure_ascii=False, indent=2))
-    package_path.unlink()
-    return bundle, {"project": repo, "tag": tag, "asset": package_name, "sha256": sha}
+        z.writestr("source.json", json.dumps(source, ensure_ascii=False, indent=2))
+    return bundle, source
 
 
 def main():
