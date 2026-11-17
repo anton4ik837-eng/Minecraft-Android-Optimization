@@ -91,6 +91,16 @@ def write_modpack(out):
         "author": "Minecraft Android Optimization Lab",
         "url": "https://github.com/anton4ik837-eng/Minecraft-Android-Optimization",
         "files": [],
+        "settings": {
+            "install_mods": True,
+            "install_resourcepack": True
+        },
+        "launchInfo": {
+            "minMemory": 4096,
+            "supportJava": [21],
+            "launchArgument": [],
+            "javaArgument": []
+        },
         "addons": [
             {"id": "game", "version": MC},
             {"id": "fabric", "version": fabric_loader_version()}
