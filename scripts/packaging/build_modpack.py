@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build an Android-focused MCBBS modpack and a separate Ironized Zink bundle."""
+"""Build an Android MCBBS modpack plus Ironized Zink and Turnip driver bundles."""
 import argparse, hashlib, json, os, pathlib, sys, time, zipfile
 import requests
 
@@ -177,6 +177,85 @@ The APK is redistributed unchanged. SHA-256: """ + sha + "\n"
     tmp.unlink()
     return zip_path, source
 
+
+def write_turnip_bundle(out):
+    # AdrenoTools-compatible Android driver package; release explicitly lists Adreno 750.
+    repo = "JustCallMeJade/Drivers_Android_Mesa"
+    tag = "v26.3.0-V5.0"
+    rel = get_json(f"https://api.github.com/repos/{repo}/releases/tags/{tag}")
+    assets = rel.get("assets", [])
+    candidates = [a for a in assets if a.get("name", "").lower().endswith((".adpkg", ".zip"))]
+    if not candidates:
+        raise RuntimeError(f"No AdrenoTools .adpkg/.zip driver asset found in {repo} {tag}")
+    # Prefer the native AdrenoTools package when the release supplies one.
+    candidates.sort(key=lambda a: (not a["name"].lower().endswith(".adpkg"), a["name"]))
+    chosen = None
+    data = None
+    for asset in candidates:
+        r = requests.get(asset["browser_download_url"], headers=HEADERS, timeout=300)
+        r.raise_for_status()
+        payload = r.content
+        try:
+            import io
+            with zipfile.ZipFile(io.BytesIO(payload)) as zf:
+                names = [n.lower() for n in zf.namelist()]
+                if any(n.endswith("libvulkan_freedreno.so") for n in names) and any(n.endswith("meta.json") for n in names):
+                    chosen, data = asset, payload
+                    break
+        except zipfile.BadZipFile:
+            continue
+    if chosen is None:
+        raise RuntimeError("No valid AdrenoTools Turnip package containing libvulkan_freedreno.so and meta.json")
+    sha = hashlib.sha256(data).hexdigest()
+    package_name = pathlib.Path(chosen["name"]).name
+    package_path = out / package_name
+    package_path.write_bytes(data)
+    instructions = """TURNIP 26.3.0-V5.0 — Adreno 750
+Status: EXPERIMENTAL / not yet tested on the exact Lenovo Xiaoxin Pad Pro GT.
+
+This is a separate Vulkan driver package for Android launchers that support
+AdrenoTools-compatible custom drivers. It is NOT a Minecraft mod and is NOT
+installed by importing the MCBBS modpack.
+
+INSTALL
+1. In Zalith Launcher, open its GPU/Vulkan driver management screen.
+2. Import the supplied driver package if the launcher exposes an AdrenoTools /
+   custom driver import option. Do not extract or rename the package.
+3. Select the Turnip driver for the Minecraft profile and restart the game.
+4. If the launcher does not offer custom driver import, do not try to install
+   the library manually into Android system folders.
+
+DEVICE MATCH
+The upstream release lists Adreno 750 as supported. This is a compatibility
+claim, not a performance guarantee or a test on this exact tablet.
+
+IMPORTANT
+- Turnip is a Vulkan driver, not a renderer.
+- Ironized Zink is an OpenGL-over-Vulkan renderer and bundles its own Mesa
+  components; selecting a system/custom Turnip driver may not replace the
+  Mesa version embedded in that renderer.
+- Test Turnip separately with a Vulkan-based renderer/backend. Keep the
+  previous driver available so you can roll back if Minecraft fails to start.
+- Do not assume Turnip improves FPS; compare identical worlds/settings and
+  record logs.
+
+Upstream: https://github.com/JustCallMeJade/Drivers_Android_Mesa/releases/tag/v26.3.0-V5.0
+Original asset: """ + package_name + """
+SHA-256: """ + sha + """
+"""
+    bundle = out / "TURNIP-26.3.0-V5.0-ADRENO750.zip"
+    with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+        z.write(package_path, package_name)
+        z.writestr("README-RU.txt", instructions)
+        z.writestr("source.json", json.dumps({
+            "project": repo, "tag": tag, "asset": package_name,
+            "url": chosen["browser_download_url"], "sha256": sha,
+            "gpu_support_claim": "Adreno 750"
+        }, ensure_ascii=False, indent=2))
+    package_path.unlink()
+    return bundle, {"project": repo, "tag": tag, "asset": package_name, "sha256": sha}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="dist")
@@ -185,9 +264,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     pack, manifest, mods = write_modpack(out)
     renderer, source = write_renderer_bundle(out)
-    print(json.dumps({"modpack": str(pack), "renderer": str(renderer),
+    turnip, turnip_source = write_turnip_bundle(out)
+    print(json.dumps({"modpack": str(pack), "renderer": str(renderer), "turnip": str(turnip),
                       "loader": manifest["addons"][1]["version"],
-                      "mods": mods, "renderer_source": source}, ensure_ascii=False, indent=2))
+                      "mods": mods, "renderer_source": source, "turnip_source": turnip_source}, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
     main()
