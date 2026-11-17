@@ -28,9 +28,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="ultra-fps-1.21.1-v0.1.0"
-          NOTES="Experimental Android test build for Zalith Launcher 2. Minecraft 1.21.1 / Fabric / Java 21. Includes MCBBS modpack and separate Ironized Zink 1.1.0 Adreno 750 bundle. Untested on the exact target tablet; no FPS guarantees."
+          NOTES="Experimental Android test build for Zalith Launcher 2. Minecraft 1.21.1 / Fabric / Java 21. Includes MCBBS modpack, Ironized Zink 1.1.0 and Turnip 26.3.0-V5.0 Adreno 750 driver bundle. Turnip is experimental and untested on the exact target tablet; no FPS guarantees."
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/mod-list.json --clobber
+            gh release upload "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/TURNIP-26.3.0-V5.0-ADRENO750.zip dist/mod-list.json --clobber
           else
             gh release create "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/mod-list.json --title "ULTRA-FPS Android 0.1.0" --notes "$NOTES"
           fi
@@ -40,5 +40,6 @@ jobs:
           path: |
             dist/ULTRA-FPS-1.21.1-MCBBS.zip
             dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip
+            dist/TURNIP-26.3.0-V5.0-ADRENO750.zip
             dist/mod-list.json
           if-no-files-found: error
