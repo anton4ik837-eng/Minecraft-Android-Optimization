@@ -16,6 +16,10 @@ SEEDS = [
 ]
 API = "https://api.modrinth.com/v2"
 HEADERS = {"User-Agent": "MinecraftAndroidOptimizationLab/0.1.0 (modpack builder)"}
+# Use the workflow token to avoid GitHub's low unauthenticated API rate limit.
+if os.getenv("GITHUB_TOKEN"):
+    HEADERS["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+    HEADERS["X-GitHub-Api-Version"] = "2022-11-28"
 
 def get_json(url, params=None):
     r = requests.get(url, params=params, headers=HEADERS, timeout=60)
