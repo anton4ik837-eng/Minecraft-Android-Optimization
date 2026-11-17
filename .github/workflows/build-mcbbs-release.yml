@@ -32,7 +32,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/TURNIP-26.3.0-V5.0-ADRENO750.zip dist/mod-list.json --clobber
           else
-            gh release create "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/mod-list.json --title "ULTRA-FPS Android 0.1.0" --notes "$NOTES"
+            gh release create "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/TURNIP-26.3.0-V5.0-ADRENO750.zip dist/mod-list.json --title "ULTRA-FPS Android 0.1.0" --notes "$NOTES"
           fi
       - uses: actions/upload-artifact@v4
         with:
