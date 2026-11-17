@@ -21,7 +21,9 @@ jobs:
           python-version: "3.12"
       - name: Install builder dependency
         run: python -m pip install requests
-      - name: Build MCBBS and renderer archives
+      - name: Build MCBBS, renderer and Turnip archives
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/packaging/build_modpack.py --output dist
       - name: Publish GitHub Release assets
         env:
