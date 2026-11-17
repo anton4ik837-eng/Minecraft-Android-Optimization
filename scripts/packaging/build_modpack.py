@@ -96,7 +96,12 @@ def write_modpack(out):
         "name": "ULTRA-FPS Android",
         "version": "0.1.0",
         "author": "Minecraft Android Optimization Lab",
+        "description": "ULTRA-FPS Android: Minecraft 1.21.1 + Fabric performance modpack for Android. Experimental build for Adreno 750.",
+        "fileApi": None,
         "url": "https://github.com/anton4ik837-eng/Minecraft-Android-Optimization",
+        "forceUpdate": False,
+        "origins": [],
+        "libraries": [],
         "files": [],
         "settings": {
             "install_mods": True,
