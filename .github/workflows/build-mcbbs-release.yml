@@ -1,0 +1,44 @@
+name: Build Android MCBBS modpack and renderer bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/packaging/build_modpack.py"
+      - ".github/workflows/build-mcbbs-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install builder dependency
+        run: python -m pip install requests
+      - name: Build MCBBS and renderer archives
+        run: python scripts/packaging/build_modpack.py --output dist
+      - name: Publish GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ultra-fps-1.21.1-v0.1.0"
+          NOTES="Experimental Android test build for Zalith Launcher 2. Minecraft 1.21.1 / Fabric / Java 21. Includes MCBBS modpack and separate Ironized Zink 1.1.0 Adreno 750 bundle. Untested on the exact target tablet; no FPS guarantees."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/mod-list.json --clobber
+          else
+            gh release create "$TAG" dist/ULTRA-FPS-1.21.1-MCBBS.zip dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip dist/mod-list.json --title "ULTRA-FPS Android 0.1.0" --notes "$NOTES"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ULTRA-FPS-Android-0.1.0
+          path: |
+            dist/ULTRA-FPS-1.21.1-MCBBS.zip
+            dist/IRONIZED-ZINK-1.1.0-ADRENO750.zip
+            dist/mod-list.json
+          if-no-files-found: error
